@@ -79,9 +79,7 @@ def create_blend_control(size=1, up_axis='Y', bind_joint='LeftWrist_Bind_Joint',
                  size * 0.25,
                  size * 0.25)
     # Offset it from the model
-    offset = size * 1.5
-    if up_axis[0] == '-':
-        offset *= - 1
+    offset = size * 1.5 * sum(limb_utils.get_axis_vector(up_axis))
     cmds.setAttr(plus_control_curve + "." + TRANSLATE + up_axis[-1], offset)
 
     # Freeze transformation
