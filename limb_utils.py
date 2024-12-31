@@ -95,7 +95,7 @@ def align_lras(snap_align=False, delete_history=True, sel=None):
             # make temporary joints to help calculate offset matrix
             tmp_parent_jnt = cmds.joint(None, name='tmp_01_JNT')
             tmp_child_jnt = cmds.joint(tmp_parent_jnt, name='tmp_02_JNT')
-            snap(tmp_child_jnt, parent_node[0])
+            snap(tmp_parent_jnt, parent_node[0])
             snap(tmp_child_jnt, jnt)
             cmds.parent(ctrl, parent_node[0])
             reset_transformation(ctrl, True, True, True)

@@ -112,17 +112,17 @@ def create_fk_controls(fk_joints, axis='X', size=1):
     fk_controls = []
     for fk in fk_joints:
         # Create a circle
-        circle_ctrl = cmds.circle(radius = size, normal = primary_axis, degree=3,
-                           name = fk.replace("_Joint", "_Control"))[0]
+        circle_ctrl = cmds.circle(radius=size, normal=primary_axis, degree=3,
+                                name = fk.replace("_Joint", "_Control"))[0]
         # Parent control to the previous unless its the root
         if idx > 0:
             cmds.parent(circle_ctrl, fk_controls[idx-1])
-
         # Snap circles to the joint and point/orient constrain to joint
         ctrl_offset = limb_utils.align_lras(snap_align=True, sel=[circle_ctrl, fk])
         cmds.pointConstraint(circle_ctrl, fk)
         cmds.orientConstraint(circle_ctrl, fk) # This line may need work?
-
+       # cmds.connectAttr(circle_ctrl + '.rotate', fk + '.rotate')
+    
         fk_controls.append(circle_ctrl)
         idx += 1
     return fk_controls
