@@ -101,11 +101,3 @@ def blend_ik_fk(ik_chain, fk_chain, bind_chain, base_name):
             cmds.connectAttr(fk + "." + attr, blend_node + ".color2")
             cmds.connectAttr(base_name + "_Control.iKfK", blend_node + ".blender")
             cmds.connectAttr(blend_node + ".output", bind + "." + attr)
-
-
-
-
-    
-
-# testing
-#create_limb()
