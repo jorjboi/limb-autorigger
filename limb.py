@@ -20,7 +20,7 @@ def create_limb(side='L', limb = 'arm',
     if len(joints) != 3 or len(aliases) != 3:
         cmds.error("Must create 3 joints for a limb")
 
-    limb_name = side + "_" + limb 
+    limb_name = side + "_" + limb
 
     ik_chain = create_chain(side, joints, aliases, 'IK')
     fk_chain = create_chain(side, joints, aliases, 'FK')
