@@ -93,7 +93,6 @@ def create_blend_control(size=1, up_axis='Y', bind_joint='LeftWrist_Bind_Joint',
     cmds.addAttr(plus_control_curve, attributeType='double', min=0, max=1, defaultValue=1,
                  keyable=True, longName='iKfK')
     return plus_control_curve
-    
                  
 def blend_ik_fk(ik_chain, fk_chain, bind_chain, base_name):
     parts = [b.replace("_Bind_Joint", '') for b in bind_chain]
