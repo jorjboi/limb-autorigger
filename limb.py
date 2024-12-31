@@ -2,9 +2,9 @@ import maya.cmds as cmds
 import maya.mel as mel
 import limb_utils as limb_utils
 
-arm_aliases = {'LeftShoulder':'shoulder',
-               'LeftElbow':'elbow',
-               'LeftWrist':'wrist'}
+arm_aliases = {'LeftShoulder':'Shoulder',
+               'LeftElbow':'Elbow',
+               'LeftWrist':'Wrist'}
 
 def create_limb(side='L', limb = 'arm',
                 parts = ['LeftShoulder', 'LeftElbow', 'LeftWrist'],
@@ -27,4 +27,9 @@ def create_limb(side='L', limb = 'arm',
     bind_chain = []
 
     return [ik_chain, fk_chain, bind_chain]
+
+# Returns a list of joints for an IK, FK, or bind chain
+def create_chain(side, parts, aliases, chain_type='ik'):
+    chain = []
+    for joint in parts:
 
