@@ -36,12 +36,10 @@ def snap(target, dest, freeze_transform=False):
     # Set the world position of the target object to match the destination
     cmds.xform(target, translation=dest_translation, worldSpace=True)
     cmds.xform(target, rotation=dest_rotation, worldSpace=True)
-
+    
     if freeze_transform:
         cmds.makeIdentity(target, apply=True, translate=True, rotate=True,
                                 scale=True, normal=False)
-
-    
 def distance(node_a, node_b):
     a_loc = cmds.xform(node_a, query=True, worldSpace=True, rotatePivot=True)
     b_loc = cmds.xform(node_b, query=True, worldSpace=True, rotatePivot=True)
@@ -49,9 +47,9 @@ def distance(node_a, node_b):
     return dist
 
 def create_curve(point_list, name, deg=1):
-    curve = cmds.curve(degree=deg, editPoint=point_list, name=name)
+    curve = cmds.curve(degree=deg, p=point_list, name=name)
     shape = cmds.listRelatives(curve, shapes=True)[0]
-    cmds.rename(shape, name + 'Shape')
+    cmds.rename(shape, curve + 'Shape')
     return curve
 
 # align local rotation axes of control to the joint
@@ -145,10 +143,8 @@ def align_lras(snap_align=False, delete_history=True, sel=None):
 def reset_transformation(nodes, translate=False, rotate=False, scale=False):
     if not nodes:
         nodes = cmds.ls(selection=True)
-    # if nodes isn't a list, make it one
     if not isinstance(nodes, list):
         nodes = [nodes]
-
     for node in nodes:
         if translate:
             cmds.setAttr(node + '.translate', 0, 0, 0)
