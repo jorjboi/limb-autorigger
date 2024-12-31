@@ -34,33 +34,36 @@ def create_limb(side='L', limb = 'arm',
     limb_name = limb.capitalize()
     base_name = side_name + limb_name
 
-    ik_chain = create_chain(side, joints, aliases, 'IK')
-    fk_chain = create_chain(side, joints, aliases, 'FK')
-    bind_chain = create_chain(side, joints, aliases, 'Bind')
+    ik_chain = create_chain(side_name, joints, aliases, 'IK')
+    fk_chain = create_chain(side_name, joints, aliases, 'FK')
+    bind_chain = create_chain(side_name, joints, aliases, 'Bind')
 
     # Find and create a good size for the control based on model size
     arm_len = limb_utils.distance(fk_chain[0], fk_chain[-1])
     size = arm_len/5.0
-    create_plus_control(size, up_axis, bind_chain[-1], base_name)
+    create_blend_control(size, up_axis, bind_chain[-1], base_name)
 
     # Blend IK/FK with blend color nodes to create bind limb
     blend_ik_fk(ik_chain, fk_chain, bind_chain, base_name)
 
+    # Create FK Controls
+    create_fk_controls(fk_chain, primary_axis, size)
+
 # Returns a list of joints for an IK, FK, or bind chain
 def create_chain(side, joints, aliases, chain_type='IK'):
-    side_prefix = "Left" if side == "L" else "Right"
     chain = []
+    idx = 0
     for j in joints:
-        if joints.index(j) == 0: # Root joint, no parent
-            joint = cmds.joint(None, name='{}{}_{}_Joint'.format(side_prefix, aliases[j], chain_type))
+        if idx == 0: # Root joint, no parent
+            joint = cmds.joint(None, name='{}{}_{}_Joint'.format(side, aliases[j], chain_type))
         else:
-            idx = joints.index(j)
-            joint = cmds.joint(chain[idx-1], name='{}{}_{}_Joint'.format(side_prefix, aliases[j], chain_type))
+            joint = cmds.joint(chain[idx-1], name='{}{}_{}_Joint'.format(side, aliases[j], chain_type))
         limb_utils.snap(joint, j, freeze_transform=True)
         chain.append(joint)
+        idx += 1
     return chain
 
-def create_plus_control(size, up_axis='Y', bind_joint='LeftWrist_Bind_Joint', base_name=""):
+def create_blend_control(size=1, up_axis='Y', bind_joint='LeftWrist_Bind_Joint', base_name=""):
     plus_shape_coords = [[-0.333, 0.333, 0.0], [-0.333, 1.0, 0.0],
                         [0.333, 1.0, 0.0], [0.333, 0.333, 0.0],
                         [1.0, 0.333, 0.0], [1.0, -0.333, 0.0],
@@ -89,6 +92,7 @@ def create_plus_control(size, up_axis='Y', bind_joint='LeftWrist_Bind_Joint', ba
     # Add IK/FK switching 
     cmds.addAttr(plus_control_curve, attributeType='double', min=0, max=1, defaultValue=1,
                  keyable=True, longName='iKfK')
+    return plus_control_curve
     
                  
 def blend_ik_fk(ik_chain, fk_chain, bind_chain, base_name):
@@ -101,3 +105,27 @@ def blend_ik_fk(ik_chain, fk_chain, bind_chain, base_name):
             cmds.connectAttr(fk + "." + attr, blend_node + ".color2")
             cmds.connectAttr(base_name + "_Control.iKfK", blend_node + ".blender")
             cmds.connectAttr(blend_node + ".output", bind + "." + attr)
+
+def create_fk_controls(fk_joints, axis='X', size=1):
+    primary_axis = limb_utils.get_axis_vector(axis)
+    idx = 0
+    fk_controls = []
+    for fk in fk_joints:
+        # Create a circle
+        circle_ctrl = cmds.circle(radius = size, normal = primary_axis, degree=3,
+                           name = fk.replace("_Joint", "_Control"))[0]
+        # Parent control to the previous unless its the root
+        if idx > 0:
+            cmds.parent(circle_ctrl, fk_controls[idx-1])
+
+        # Snap circles to the joint and point/orient constrain to joint
+        ctrl_offset = limb_utils.align_lras(snap_align=True, sel=[circle_ctrl, fk])
+        cmds.pointConstraint(circle_ctrl, fk)
+        cmds.orientConstraint(circle_ctrl, fk) # This line may need work?
+
+        fk_controls.append(circle_ctrl)
+        idx += 1
+    return fk_controls
+
+            
+        

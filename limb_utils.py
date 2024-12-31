@@ -36,7 +36,7 @@ def snap(target, dest, freeze_transform=False):
     # Set the world position of the target object to match the destination
     cmds.xform(target, translation=dest_translation, worldSpace=True)
     cmds.xform(target, rotation=dest_rotation, worldSpace=True)
-    
+
     if freeze_transform:
         cmds.makeIdentity(target, apply=True, translate=True, rotate=True,
                                 scale=True, normal=False)
@@ -98,7 +98,7 @@ def align_lras(snap_align=False, delete_history=True, sel=None):
             snap(tmp_child_jnt, parent_node[0])
             snap(tmp_child_jnt, jnt)
             cmds.parent(ctrl, parent_node[0])
-            reset_transformation(ctrl, True, True, true)
+            reset_transformation(ctrl, True, True, True)
 
             child_matrix = cmds.getAttr(tmp_child_jnt + '.matrix')
             cmds.setAttr(ctrl + '.offsetParentMatrix', child_matrix, type='matrix')
@@ -152,3 +152,18 @@ def reset_transformation(nodes, translate=False, rotate=False, scale=False):
             cmds.setAttr(node + '.rotate', 0, 0, 0)
         if scale:
             cmds.setAttr(node + '.scale', 1, 1, 1)
+
+def get_axis_vector(axis='X'):
+    axis_vec = (1, 0, 0)
+    if axis[-1] == 'X':
+        pass
+    elif axis[-1] == 'Y':
+        axis_vec = (0, 1, 0)
+    elif axis[-1] == 'Z':
+        axis_vec = (0, 0, 1)
+    else:
+        cmds.error("Must be X, Y, Z or -X, -Y, -Z")
+    if axis[0] == '-':
+        axis_vec = tuple((-a for a in axis))
+    return axis_vec
+    
