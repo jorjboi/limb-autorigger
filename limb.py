@@ -72,7 +72,7 @@ def create_plus_control(size, up_axis='Y', bind_joint='LeftWrist_Bind_Joint', ba
     limb_utils.align_lras(snap_align=True, sel=[plus_control_curve, bind_joint])
 
     cmds.setAttr(plus_control_curve + '.' + SCALE, 
-                 size * 0.25, 
+                 size * 0.25,
                  size * 0.25,
                  size * 0.25)
     # Offset it from the model
