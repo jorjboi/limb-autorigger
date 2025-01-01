@@ -182,6 +182,7 @@ def add_ik_stretch(base_name, limb, ik_joints, ik_base_ctrl, ik_world_ctrl, ik_l
     # Add on/off control for stretch and limb lengths
     cmds.addAttr(ik_world_ctrl, attributeType='double', min=0, max=1, 
                  defaultValue=1, keyable=True, longName='stretch')
+    # Add lower and upper arm lengths
     cmds.addAttr(ik_world_ctrl, attributeType='double', defaultValue=1,
                  keyable=True, longName=up_name)
     cmds.addAttr(ik_world_ctrl, attributeType='double', defaultValue=1,
@@ -203,7 +204,7 @@ def add_ik_stretch(base_name, limb, ik_joints, ik_base_ctrl, ik_world_ctrl, ik_l
     cmds.connectAttr(start_loc + ".worldMatrix[0]", distance_start_end + ".inMatrix1")
     cmds.connectAttr(end_loc + ".worldMatrix[0]", distance_start_end + ".inMatrix2")
 
-    # Calculate Stretch
+    # Calculate Stretch Ratio (distance to total bone length)
     stretch_ratio = cmds.createNode("multiplyDivide", name=base_name + "_stretchFactor")
     cmds.connectAttr(distance_start_end + ".distance", stretch_ratio + ".input1X")
     cmds.setAttr(stretch_ratio + ".input2X", total_bone_length)
@@ -216,11 +217,13 @@ def add_ik_stretch(base_name, limb, ik_joints, ik_base_ctrl, ik_world_ctrl, ik_l
     cmds.setAttr(stretch_cond + '.secondTerm', total_bone_length)
     cmds.setAttr(stretch_cond + '.operation', 3) # firstTerm > secondTerm, greater than operator
     
-    # Blend stretching
+    # stretching on/off
     stretch_bta = cmds.createNode('blendTwoAttr', name=base_name + "_stretch_BTA")
     cmds.setAttr(stretch_bta + ".input[0]", 1)
     cmds.connectAttr(stretch_cond + ".outColorR", stretch_bta + ".input[1]")
     cmds.connectAttr(ik_world_ctrl + ".stretch", stretch_bta + ".attributesBlender")
+    
+    # Add length to upper/lower arms
     up_pma = cmds.createNode('plusMinusAverage', name=up_name + "PMA")
     lo_pma = cmds.createNode('plusMinusAverage', name=lo_name + "PMA")
     cmds.connectAttr(ik_world_ctrl + '.' + up_name, up_pma + ".input1D[0]")
