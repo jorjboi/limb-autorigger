@@ -278,34 +278,33 @@ def add_ik_stretch(base_name, limb, ik_joints, ik_base_ctrl, ik_world_ctrl, ik_l
 
 def add_fk_stretch(fk_joints, fk_ctrls, axis):
     for i, fk_ctrl in enumerate(fk_ctrls):
-        if i != len(fk_ctrls) - 1:
-            # Add stretch attribute control on shoulder and elbow (but not wrist)
-            cmds.addAttr(fk_ctrl, attributeType='double', min=0.001, defaultValue=1,
-                         keyable=True, longName='stretch')
-            cmds.createNode('multDoubleLinear',
-                            name=fk_ctrl.replace("_Control", "_MDL"))
-            # Create locator
-            offset_loc = cmds.spaceLocator(
-                name=fk_ctrl[i].replace('_Control', "_offLOC"))[0]
-            # Parent to this joint
-            cmds.parent(offset_loc, fk_joints[i])
-            # Move locators to position elblow locator -> wrist, shoulder -> elbow
-            limb_utils.snap(offset_loc, fk_joints[i+1])
-            # make MDL to find stretch factor
-            fk_stretch_mdl = cmds.createNode("multDoubleLinear",
-                                             name=fk_ctrl.replace("_Control", "_FK_Stretch_MDL"))
-            # Make input1 translate_x of offset locator
-            offset_x = cmds.getAttr(
-                offset_loc + '.' + TRANSLATE + axis[-1])
-            cmds.setAttr(fk_stretch_mdl + ".input1", offset_x)
-            # Make input2 the stretch factor from each joint's control
-            cmds.connectAttr(fk_ctrl + ".stretch", fk_stretch_mdl + ".input2")
-            # Add the output to the translate x of locator
-            cmds.connectAttr(fk_stretch_mdl + ".output",
-                             offset_loc + ".translate" + axis[-1])
-            # Connect stretch attribute into bone scaling
-            cmds.connectAttr(fk_ctrl + ".stretch",
-                             fk_joints[i] + ".scale" + axis[-1])
-            # Maya 2019 and above have offsetParentMatrix
-            cmds.connectAttr(offset_loc + ".matrix",
-                             fk_joints[i+1] + ".offsetParentMatrix")
+        if i == len(fk_ctrls) - 1:
+            break
+        # Add stretch attribute control on shoulder and elbow (but not wrist)
+        cmds.addAttr(fk_ctrl, attributeType='double', min=0.001, defaultValue=1,
+                     keyable=True, longName='stretch')
+        # Create locator
+        offset_loc = cmds.spaceLocator(
+            name=fk_ctrl[i].replace('_Control', "_offLOC"))[0]
+        # Parent to this joint
+        cmds.parent(offset_loc, fk_joints[i])
+        # Move locators to position elblow locator -> wrist, shoulder -> elbow
+        limb_utils.snap(offset_loc, fk_joints[i+1])
+        # make MDL to find stretch factor
+        fk_stretch_mdl = cmds.createNode("multDoubleLinear",
+                                         name=fk_ctrl.replace("_Control", "_FK_Stretch_MDL"))
+        # Make input1 translate_x of offset locator
+        offset_x = cmds.getAttr(
+            offset_loc + '.' + TRANSLATE + axis[-1])
+        cmds.setAttr(fk_stretch_mdl + ".input1", offset_x)
+        # Make input2 the stretch factor from each joint's control
+        cmds.connectAttr(fk_ctrl + ".stretch", fk_stretch_mdl + ".input2")
+        # Add the output to the translate x of locator
+        cmds.connectAttr(fk_stretch_mdl + ".output",
+                         offset_loc + ".translate" + axis[-1])
+        # Connect stretch attribute into bone scaling
+        cmds.connectAttr(fk_ctrl + ".stretch",
+                         fk_joints[i] + ".scale" + axis[-1])
+        # Maya 2019 and above have offsetParentMatrix
+        cmds.connectAttr(offset_loc + ".matrix",
+                         fk_ctrls[i+1] + ".offsetParentMatrix")
