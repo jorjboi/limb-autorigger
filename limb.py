@@ -49,6 +49,9 @@ def create_limb(side='L', limb = 'arm',
     # Create FK Controls
     create_fk_controls(fk_chain, primary_axis, size)
 
+    # Create IK Controls and Handle
+    create_ik_controls_and_handle(base_name, ik_chain, pole_vector, primary_axis, size)
+
 # Returns a list of joints for an IK, FK, or bind chain
 def create_chain(side, joints, aliases, chain_type='IK'):
     chain = []
@@ -124,5 +127,40 @@ def create_fk_controls(fk_joints, axis='X', size=1):
         idx += 1
     return fk_controls
 
-            
-        
+def create_ik_controls_and_handle(base_name, ik_joints, pole_vector, axis='X', size=1):
+    # Create world control for wrist
+    primary_axis = limb_utils.get_axis_vector(axis)
+    world_ctrl = cmds.circle(radius = size*1.2, normal=primary_axis, degree=1, sections=4,
+                             constructionHistory=False, name=base_name + "_IK_Control")[0]
+    cmds.setAttr(world_ctrl + '.rotate' + axis[-1], 45)
+    limb_utils.snap(world_ctrl, ik_joints[-1], freeze_transform=True, rotate=False)
+
+    # Create local control for wrist
+    local_ctrl = cmds.circle(radius = size*1.2, normal=primary_axis, degree=1, sections=4,
+                             constructionHistory=False, name=base_name + "Local_IK_Control")[0]
+    cmds.setAttr(local_ctrl + '.rotate' + axis[-1], 45)
+    local_off = limb_utils.align_lras(snap_align=True, sel=[local_ctrl, ik_joints[-1]])
+    
+    #Parent local to world
+    cmds.parent(local_off, world_ctrl)
+
+    # Create pole vector control
+    pv_ctrl_points = [[0, 1, 0], [0, -1, 0], [0, 0, 0], [-1, 0, 0], [1, 0, 0], 
+                      [0, 0, 0], [0, 0, -1], [0, 0, 1]]
+    pv_ctrl = limb_utils.create_curve(pv_ctrl_points, name=base_name + "_PV_Control")
+    cmds.setAttr(pv_ctrl + "." + SCALE, size * 0.25, size * 0.25, size * 0.25)
+    limb_utils.snap(pv_ctrl, pole_vector, rotate=False, freeze_transform=True)
+
+    # Create Base Control at shoulder
+    base_ctrl = cmds.circle(radius = size*1.2, normal=primary_axis, degree=1, sections=4,
+                             constructionHistory=False, name=base_name + "_Base_Control")[0]        
+    cmds.setAttr(base_ctrl + '.rotate' + axis[-1], 45)
+    limb_utils.snap(base_ctrl, ik_joints[0], rotate=False, freeze_transform=True)
+    cmds.parentConstraint(base_ctrl, ik_joints[0], maintainOffset=True)
+
+   # Create IK Handle
+    ik_handle = cmds.ikHandle(name=base_name + "IK_Handle", startJoint=ik_joints[0], 
+                             endEffector=ik_joints[-1], sticky='sticky',solver='ikRPsolver', 
+                             setupForRPsolver=True)[0]    
+    cmds.parentConstraint(local_ctrl, ik_handle, maintainOffset=True)
+    cmds.poleVectorConstraint(pv_ctrl, ik_handle)
