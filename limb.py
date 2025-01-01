@@ -2,7 +2,6 @@ import maya.cmds as cmds
 import maya.mel as mel
 import lrig.limb_utils as limb_utils
 import importlib
-
 importlib.reload(limb_utils)
 
 TRANSLATE = "translate"
@@ -121,8 +120,7 @@ def create_fk_controls(fk_joints, axis='X', size=1):
         ctrl_offset = limb_utils.align_lras(snap_align=True, sel=[circle_ctrl, fk])
         cmds.pointConstraint(circle_ctrl, fk)
         cmds.orientConstraint(circle_ctrl, fk) # This line may need work?
-       # cmds.connectAttr(circle_ctrl + '.rotate', fk + '.rotate')
-    
+       # cmds.connectAttr(circle_ctrl + '.rotate', fk + '.rotate') 
         fk_controls.append(circle_ctrl)
         idx += 1
     return fk_controls
@@ -164,3 +162,12 @@ def create_ik_controls_and_handle(base_name, ik_joints, pole_vector, axis='X', s
                              setupForRPsolver=True)[0]    
     cmds.parentConstraint(local_ctrl, ik_handle, maintainOffset=True)
     cmds.poleVectorConstraint(pv_ctrl, ik_handle)
+
+def add_ik_stretch(base_name, ik_joints, ik_base_ctlr, ik_local_ctrl, axis):
+    primary_axis = limb_utils.get_axis_vector(axis)
+    # Lengths of upper bone and lower bone
+    upper_bone_length = limb_utils.distance(ik_joints[0], ik_joints[1])
+    lower_bone_length = limb_utils.distance(ik_joints[1], ik_joints[2])
+    total_bone_length = upper_bone_length + lower_bone_length
+    # Create nodes to measure
+    
