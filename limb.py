@@ -46,7 +46,7 @@ def create_limb(side='L', limb = 'arm',
     blend_ik_fk(ik_chain, fk_chain, bind_chain, base_name)
 
     # Create FK Controls
-    create_fk_controls(fk_chain, primary_axis, size)
+    fk_controls = create_fk_controls(fk_chain, primary_axis, size)
 
     # Create IK Controls and Handle
     ik_ctrls = create_ik_controls_and_handle(base_name, ik_chain, pole_vector, primary_axis, size)
@@ -183,9 +183,9 @@ def add_ik_stretch(base_name, limb, ik_joints, ik_base_ctrl, ik_world_ctrl, ik_l
     cmds.addAttr(ik_world_ctrl, attributeType='double', min=0, max=1, 
                  defaultValue=1, keyable=True, longName='stretch')
     # Add lower and upper arm lengths
-    cmds.addAttr(ik_world_ctrl, attributeType='double', defaultValue=1,
+    cmds.addAttr(ik_world_ctrl, attributeType='double', min=0.001, defaultValue=1,
                  keyable=True, longName=up_name)
-    cmds.addAttr(ik_world_ctrl, attributeType='double', defaultValue=1,
+    cmds.addAttr(ik_world_ctrl, attributeType='double', min=0.001, defaultValue=1,
                  keyable=True, longName=lo_name)
 
     # Lengths of upper bone and lower bone
@@ -243,4 +243,10 @@ def add_ik_stretch(base_name, limb, ik_joints, ik_base_ctrl, ik_world_ctrl, ik_l
                    'cnd': stretch_cond}
     return return_dict
 
-    
+def add_fk_stretch(fk_joints, fk_ctrls, axis):
+    for fk_ctrl, i in enumerate(fk_ctrls):
+        if i != len(fk_ctrls) - 1:
+            cmds.addAttr(fk_ctrl, attributeType='double', min=0.001, defaultValue=1,
+                         keyable=True, name='fk_stretch')
+            cmds.createNode('multDoubleLinear', name=fk_ctrl.replace("_Control", "_MDL"))
+            
