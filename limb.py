@@ -83,10 +83,7 @@ def create_blend_control(size=1, up_axis='Y', bind_joint='LeftWrist_Bind_Joint',
     plus_control_curve = limb_utils.create_curve(plus_shape_coords, base_name + "_Control")
     limb_utils.align_lras(snap_align=True, sel=[plus_control_curve, bind_joint])
 
-    cmds.setAttr(plus_control_curve + '.' + SCALE, 
-                 size * 0.25,
-                 size * 0.25,
-                 size * 0.25)
+    cmds.setAttr(plus_control_curve + '.' + SCALE, size * 0.25, size * 0.25, size * 0.25)
     # Offset it from the model
     offset = size * 1.5 * sum(limb_utils.get_axis_vector(up_axis))
     cmds.setAttr(plus_control_curve + "." + TRANSLATE + up_axis[-1], offset)
@@ -150,8 +147,9 @@ def create_ik_controls_and_handle(base_name, ik_joints, pole_vector, axis='X', s
     cmds.parent(local_off, world_ctrl)
 
     # Create pole vector control
-    pv_ctrl_points = [[0, 1, 0], [0, -1, 0], [0, 0, 0], [-1, 0, 0], [1, 0, 0], 
-                      [0, 0, 0], [0, 0, -1], [0, 0, 1]]
+    pv_ctrl_points = [[0, 1, 0], [0, -1, 0], [0, 0, 0], 
+                      [-1, 0, 0], [1, 0, 0], [0, 0, 0], 
+                      [0, 0, -1], [0, 0, 1]]
     pv_ctrl = limb_utils.create_curve(pv_ctrl_points, name=base_name + "_PV_Control")
     cmds.setAttr(pv_ctrl + "." + SCALE, size * 0.25, size * 0.25, size * 0.25)
     limb_utils.snap(pv_ctrl, pole_vector, rotate=False, freeze_transform=True)
@@ -246,7 +244,15 @@ def add_ik_stretch(base_name, limb, ik_joints, ik_base_ctrl, ik_world_ctrl, ik_l
 def add_fk_stretch(fk_joints, fk_ctrls, axis):
     for fk_ctrl, i in enumerate(fk_ctrls):
         if i != len(fk_ctrls) - 1:
+            # Add stretch attribute control on shoulder and elbow (but not wrist)
             cmds.addAttr(fk_ctrl, attributeType='double', min=0.001, defaultValue=1,
                          keyable=True, name='fk_stretch')
             cmds.createNode('multDoubleLinear', name=fk_ctrl.replace("_Control", "_MDL"))
+            # Get locator of child (next joint down). E
+            offset_loc = cmds.spaceLoactor(name=fk_joints[i].replace('_FK_Joint', "_offLLOC"))[0]
+            # Parent to this joint
+            cmds.parentConstraint(offset_loc, fk_ctrl[i], maintainOffset=True)
+            # Move Elblow locator -> wrist, shoulder -> elbow
+            limb_utils.snap(offset_loc, fk_joints[i+1], freeze_transform=True)
+
             

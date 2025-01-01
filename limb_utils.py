@@ -17,7 +17,6 @@ def reset_to_origin(node):
     reset_transformation(node, rotate=True)
     cmds.makeIdentity(node, apply=True, translate=True, rotate=True, scale=False, normal=False)
 
-
 # Moves target object to destination object's position and orientation
 # Won't work if objects are locked or have translate or rotate connections
 def snap(target, dest, freeze_transform=False, translate=True, rotate=True):
