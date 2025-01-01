@@ -163,11 +163,35 @@ def create_ik_controls_and_handle(base_name, ik_joints, pole_vector, axis='X', s
     cmds.parentConstraint(local_ctrl, ik_handle, maintainOffset=True)
     cmds.poleVectorConstraint(pv_ctrl, ik_handle)
 
-def add_ik_stretch(base_name, ik_joints, ik_base_ctlr, ik_local_ctrl, axis):
+def add_ik_stretch(base_name, ik_joints, ik_base_ctrl, ik_local_ctrl, axis):
     primary_axis = limb_utils.get_axis_vector(axis)
+    
     # Lengths of upper bone and lower bone
     upper_bone_length = limb_utils.distance(ik_joints[0], ik_joints[1])
     lower_bone_length = limb_utils.distance(ik_joints[1], ik_joints[2])
     total_bone_length = upper_bone_length + lower_bone_length
-    # Create nodes to measure
+    
+    # Create locators at the shoulder and the wrist
+    start_loc = cmds.spaceLocator(name = base_name + "_startLocator")[0]
+    end_loc = cmds.spaceLocator(name = base_name + "_endLocator")[0]
+    cmds.pointConstraint(ik_base_ctrl, start_loc, maintainOffset=False)
+    cmds.pointConstraint(ik_local_ctrl, end_loc, maintainOffset=False)
+
+    # Create node that calculates distance between start and end
+    distance_start_end = cmds.createNode("distanceBetween", name=base_name + "_distanceBetween")
+    cmds.connectAttr(start_loc + ".worldMatrix[0]", distance_start_end + ".inMatrix1")
+    cmds.connectAttr(end_loc + ".worldMatrix[0]", distance_start_end + ".inMatrix2")
+
+    # Calculate Stretch
+    stretch_ratio = cmds.createNode("multiplyDivide", name=base_name + "_stretchFactor")
+    cmds.connectAttr(distance_start_end + ".distance", stretch_ratio + ".input1X")
+    cmds.setAttr(stretch_ratio + ".input2X", total_bone_length)
+    cmds.setAttr(stretch_ratio + ".operation", 2) # To perform divison between input1X and input2X
+
+    # Condition node. If stretch ratio >= 1, perform a stretch
+
+
+                     
+
+
     
