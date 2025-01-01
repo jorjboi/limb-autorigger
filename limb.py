@@ -20,7 +20,7 @@ def create_limb(side='L', limb = 'arm',
                 joints = [LEFT_SHOULDER, LEFT_ELBOW, LEFT_WRIST],
                 aliases = arm_aliases, pole_vector = LEFT_POLE_VECTOR, 
                 primary_axis='X', up_axis= 'Y',
-                del_guides=False, stretch=False, color_dict={}):
+                del_guides=False, stretch=True, color_dict={}):
    # Checks
     if side not in ['L', 'R']:
         cmds.error("Must specify L (left) or R (right) for side")
@@ -49,7 +49,14 @@ def create_limb(side='L', limb = 'arm',
     create_fk_controls(fk_chain, primary_axis, size)
 
     # Create IK Controls and Handle
-    create_ik_controls_and_handle(base_name, ik_chain, pole_vector, primary_axis, size)
+    ik_ctrls = create_ik_controls_and_handle(base_name, ik_chain, pole_vector, primary_axis, size)
+    ik_base_ctrl = ik_ctrls['base_ctrl']
+    ik_world_ctrl = ik_ctrls['world_ctrl']
+    ik_local_ctrl = ik_ctrls['local_ctrl']
+    if stretch:
+       ik_stretch_ctrls = add_ik_stretch(base_name, 'arm', ik_chain, 
+                                          ik_base_ctrl, ik_world_ctrl, ik_local_ctrl, 
+                                          primary_axis)
 
 # Returns a list of joints for an IK, FK, or bind chain
 def create_chain(side, joints, aliases, chain_type='IK'):
@@ -163,9 +170,23 @@ def create_ik_controls_and_handle(base_name, ik_joints, pole_vector, axis='X', s
     cmds.parentConstraint(local_ctrl, ik_handle, maintainOffset=True)
     cmds.poleVectorConstraint(pv_ctrl, ik_handle)
 
-def add_ik_stretch(base_name, ik_joints, ik_base_ctrl, ik_local_ctrl, axis):
-    primary_axis = limb_utils.get_axis_vector(axis)
-    
+    control_dict = {'base_ctrl': base_ctrl,
+                    'world_ctrl': world_ctrl,
+                    'local_ctrl': local_ctrl}
+    return control_dict
+
+
+def add_ik_stretch(base_name, limb, ik_joints, ik_base_ctrl, ik_world_ctrl, ik_local_ctrl, axis):
+    up_name = "up" + limb.capitalize()
+    lo_name = "lo" + limb.capitalize()
+    # Add on/off control for stretch and limb lengths
+    cmds.addAttr(ik_world_ctrl, attributeType='double', min=0, max=1, 
+                 defaultValue=1, keyable=True, longName='stretch')
+    cmds.addAttr(ik_world_ctrl, attributeType='double', defaultValue=1,
+                 keyable=True, longName=up_name)
+    cmds.addAttr(ik_world_ctrl, attributeType='double', defaultValue=1,
+                 keyable=True, longName=lo_name)
+
     # Lengths of upper bone and lower bone
     upper_bone_length = limb_utils.distance(ik_joints[0], ik_joints[1])
     lower_bone_length = limb_utils.distance(ik_joints[1], ik_joints[2])
@@ -189,9 +210,34 @@ def add_ik_stretch(base_name, ik_joints, ik_base_ctrl, ik_local_ctrl, axis):
     cmds.setAttr(stretch_ratio + ".operation", 2) # To perform divison between input1X and input2X
 
     # Condition node. If stretch ratio >= 1, perform a stretch
+    stretch_cond = cmds.createNode("condition", name=base_name + "_stretch_condition")
+    cmds.connectAttr(distance_start_end + ".distance", stretch_cond + '.firstTerm')
+    cmds.connectAttr(stretch_ratio + ".outputX", stretch_cond + ".colorIfTrueR")
+    cmds.setAttr(stretch_cond + '.secondTerm', total_bone_length)
+    cmds.setAttr(stretch_cond + '.operation', 3) # firstTerm > secondTerm, greater than operator
+    
+    # Blend stretching
+    stretch_bta = cmds.createNode('blendTwoAttr', name=base_name + "_stretch_BTA")
+    cmds.setAttr(stretch_bta + ".input[0]", 1)
+    cmds.connectAttr(stretch_cond + ".outColorR", stretch_bta + ".input[1]")
+    cmds.connectAttr(ik_world_ctrl + ".stretch", stretch_bta + ".attributesBlender")
+    up_pma = cmds.createNode('plusMinusAverage', name=up_name + "PMA")
+    lo_pma = cmds.createNode('plusMinusAverage', name=lo_name + "PMA")
+    cmds.connectAttr(ik_world_ctrl + '.' + up_name, up_pma + ".input1D[0]")
+    cmds.connectAttr(ik_world_ctrl + '.' + lo_name, lo_pma + ".input1D[0]")
+    cmds.connectAttr(stretch_bta + '.output', up_pma + ".input1D[1]")
+    cmds.connectAttr(stretch_bta + '.output', lo_pma + ".input1D[1]")
+    cmds.setAttr(up_pma + '.input1D[2]', -1)
+    cmds.setAttr(lo_pma + '.input1D[2]', -1)
 
-
+    # Scale upper and lower limbs
+    cmds.connectAttr(up_pma + '.output1D', ik_joints[0] + '.' + SCALE + axis[-1])
+    cmds.connectAttr(lo_pma + '.output1D', ik_joints[1] + '.' + SCALE + axis[-1])
                      
-
+    return_dict = {'measure_locs' : [start_loc, end_loc],
+                   'total_length' : total_bone_length,
+                   'mdn': stretch_ratio,
+                   'cnd': stretch_cond}
+    return return_dict
 
     
