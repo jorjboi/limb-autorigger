@@ -2,12 +2,14 @@ import math
 import maya.cmds as cmds
 import maya.mel as mel
 
+
 def reset_to_origin(node):
     # Find position
     node_pos = cmds.xform(node, query=True, worldSpace=True, rotatePivot=True)
 
     # Freeze transformation for translation
-    cmds.makeIdentity(node, apply=True, translate=True, rotate=False, scale=False, normal=False)
+    cmds.makeIdentity(node, apply=True, translate=True,
+                      rotate=False, scale=False, normal=False)
 
     # Find translation and move to origin
     node_translation = [-p for p in node_pos]
@@ -15,7 +17,9 @@ def reset_to_origin(node):
 
     # Reset rotation and freeze transform
     reset_transformation(node, rotate=True)
-    cmds.makeIdentity(node, apply=True, translate=True, rotate=True, scale=False, normal=False)
+    cmds.makeIdentity(node, apply=True, translate=True,
+                      rotate=True, scale=False, normal=False)
+
 
 # Moves target object to destination object's position and orientation
 # Won't work if objects are locked or have translate or rotate connections
@@ -27,23 +31,27 @@ def snap(target, dest, freeze_transform=False, translate=True, rotate=True):
         dest = cmds.ls(selection=True)[1]
     if target == None or dest == None:
         cmds.error("Must provide a target and destination object")
-    
+
     # Set position and orientation of the target to the dest
-    if translate:   
-        dest_translation = cmds.xform(dest, query=True, translation=True, worldSpace=True)
+    if translate:
+        dest_translation = cmds.xform(
+            dest, query=True, translation=True, worldSpace=True)
         cmds.xform(target, translation=dest_translation, worldSpace=True)
     if rotate:
-        dest_rotation = cmds.xform(dest, query=True, rotation=True, worldSpace=True)
+        dest_rotation = cmds.xform(
+            dest, query=True, rotation=True, worldSpace=True)
         cmds.xform(target, rotation=dest_rotation, worldSpace=True)
-    
     if freeze_transform:
         cmds.makeIdentity(target, apply=True, translate=True, rotate=True,
-                                scale=True, normal=False)
+                          scale=True, normal=False)
+
+
 def distance(node_a, node_b):
     a_loc = cmds.xform(node_a, query=True, worldSpace=True, rotatePivot=True)
     b_loc = cmds.xform(node_b, query=True, worldSpace=True, rotatePivot=True)
-    dist = pow(sum([pow(a-b,2) for a, b in zip(a_loc, b_loc)]), 0.5)
+    dist = pow(sum([pow(a-b, 2) for a, b in zip(a_loc, b_loc)]), 0.5)
     return dist
+
 
 def create_curve(point_list, name, deg=1):
     curve = cmds.curve(degree=deg, p=point_list, name=name)
@@ -53,6 +61,8 @@ def create_curve(point_list, name, deg=1):
 
 # align local rotation axes of control to the joint
 # Code taken from Nick Miller
+
+
 def align_lras(snap_align=False, delete_history=True, sel=None):
     # get selection (first ctrl, then joint)
     if not sel:
@@ -84,7 +94,7 @@ def align_lras(snap_align=False, delete_history=True, sel=None):
         cmds.setAttr(ctrl + '.offsetParentMatrix',
                      [1.0, 0.0, 0.0, 0.0, 0.0,
                       1.0, 0.0, 0.0, 0.0, 0.0,
-                      1.0, 0.0, 0.0, 0.0,0.0,
+                      1.0, 0.0, 0.0, 0.0, 0.0,
                       1.0], type='matrix')
         reset_to_origin(ctrl)
         # copy joint's matrix to control's offsetParentMatrix
@@ -100,7 +110,8 @@ def align_lras(snap_align=False, delete_history=True, sel=None):
             reset_transformation(ctrl, True, True, True)
 
             child_matrix = cmds.getAttr(tmp_child_jnt + '.matrix')
-            cmds.setAttr(ctrl + '.offsetParentMatrix', child_matrix, type='matrix')
+            cmds.setAttr(ctrl + '.offsetParentMatrix',
+                         child_matrix, type='matrix')
             cmds.delete(tmp_parent_jnt)
 
     # Maya 2019 and below
@@ -110,10 +121,10 @@ def align_lras(snap_align=False, delete_history=True, sel=None):
         off_grp = cmds.createNode('transform', name=ctrl + '_OFF_GRP')
 
         # move offset group to joint position, parent ctrl to it, zero channels
-        cmds.xform(off_grp, worldSpace=True, translation=jnt_pos, rotation=jnt_rot)
+        cmds.xform(off_grp, worldSpace=True,
+                   translation=jnt_pos, rotation=jnt_rot)
         if parent_node:
             cmds.parent(off_grp, parent_node[0])
-
 
     # move the control back into place
     cmds.xform(ctrl, worldSpace=True, translation=ctrl_pos)
@@ -138,7 +149,8 @@ def align_lras(snap_align=False, delete_history=True, sel=None):
         return off_grp
     else:
         return ctrl
-    
+
+
 def reset_transformation(nodes, translate=False, rotate=False, scale=False):
     if not nodes:
         nodes = cmds.ls(selection=True)
@@ -151,6 +163,7 @@ def reset_transformation(nodes, translate=False, rotate=False, scale=False):
             cmds.setAttr(node + '.rotate', 0, 0, 0)
         if scale:
             cmds.setAttr(node + '.scale', 1, 1, 1)
+
 
 def get_axis_vector(axis='X'):
     axis_vec = (1, 0, 0)
@@ -165,4 +178,3 @@ def get_axis_vector(axis='X'):
     if axis[0] == '-':
         axis_vec = tuple((-a for a in axis))
     return axis_vec
-    
