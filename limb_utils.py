@@ -178,3 +178,22 @@ def get_axis_vector(axis='X'):
     if axis[0] == '-':
         axis_vec = tuple((-a for a in axis))
     return axis_vec
+
+
+# transfers pivots to either first selected object or origin
+def transfer_pivots(origin=False, sel=False):
+    # if selection list is not defined, use selected in scene
+    if not sel:
+        sel = cmds.ls(selection=True)
+    # move pivot to origin
+    if origin:
+        for s in sel:
+            cmds.xform(s, worldSpace=True, pivots=(0, 0, 0))
+    # move pivot to first selected object
+    else:
+        # get the rotate pivot
+        first_piv = cmds.xform(sel[0], query=True, worldSpace=True,
+                               rotatePivot=True)
+        for s in sel[1:]:
+            # set the rotate and scale pivot simultaneously
+            cmds.xform(s, worldSpace=True, pivots=first_piv)

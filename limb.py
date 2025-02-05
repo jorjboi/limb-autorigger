@@ -41,7 +41,8 @@ def create_limb(side='L', limb='arm',
     # Find and create a good size for the control based on model size
     arm_len = limb_utils.distance(fk_chain[0], fk_chain[-1])
     size = arm_len/5.0
-    create_blend_control(size, up_axis, bind_chain[-1], base_name)
+    plus_ctrl_curve = create_blend_control(
+        size, up_axis, bind_chain[-1], base_name)
 
     # Blend IK/FK with blend color nodes to create bind limb
     blend_ik_fk(ik_chain, fk_chain, bind_chain, base_name)
@@ -55,11 +56,45 @@ def create_limb(side='L', limb='arm',
     ik_base_ctrl = ik_ctrls['base_ctrl']
     ik_world_ctrl = ik_ctrls['world_ctrl']
     ik_local_ctrl = ik_ctrls['local_ctrl']
+    ik_pv_ctrl = ik_ctrls['pv_ctrl']
+    no_xform_list = [ik_ctrls['handle']]
+
     if stretch:
         ik_stretch_ctrls = add_ik_stretch(base_name, 'arm', ik_chain,
                                           ik_base_ctrl, ik_world_ctrl, ik_local_ctrl,
                                           primary_axis)
         add_fk_stretch(fk_chain, fk_ctrls, primary_axis)
+        no_xform_list += ik_stretch_ctrls['measure_locs']
+
+    # Clean hiearchy
+    fk_ctrl_group = cmds.group(empty=True, name=base_name + '_FK_CTRL_GROUP')
+    ik_ctrl_group = cmds.group(empty=True, name=base_name + '_IK_CTRL_GROUP')
+    skeleton_ctrl_group = cmds.group(
+        empty=True, name=base_name + '_skeleton_CTRL_GROUP')
+    no_xform_group = cmds.group(
+        empty=True, name=base_name + '_noXform_CTRL_GROUP')
+    limb_rig_group = cmds.group(empty=True, name=base_name + '_rig_GROUP')
+    all_group = cmds.group(empty=True, name=base_name.upper())
+
+    # Group ik and fk controls
+    cmds.parent(ik_world_ctrl, ik_local_ctrl,
+                ik_ctrl_group, ik_pv_ctrl, ik_ctrl_group)
+    cmds.parent(fk_ctrls[0], fk_ctrl_group)
+
+    # Parent bind chain to skeleton group
+    cmds.parent(bind_chain[0], skeleton_ctrl_group)
+
+    # Parent no xform list to group
+    cmds.parent(no_xform_list, no_xform_group)
+
+    # Everything except skeleton group go into limb rig group
+    cmds.parent(fk_ctrl_group, ik_ctrl_group, no_xform_group,
+                fk_chain[0], ik_chain[0], plus_ctrl_curve, limb_rig_group)
+    cmds.parent(skeleton_ctrl_group, limb_rig_group, all_group)
+
+    limb_utils.transfer_pivots(
+        sel=[bind_chain[0], skeleton_ctrl_group, limb_rig_group, fk_ctrl_group, ik_ctrl_group])
+    cmds.hide(no_xform_group, fk_chain[0], ik_chain[0], bind_chain[0])
 
 # Returns a list of joints for an IK, FK, or bind chain
 
@@ -156,7 +191,7 @@ def create_ik_controls_and_handle(base_name, ik_joints, pole_vector, axis='X', s
 
     # Create local control for wrist
     local_ctrl = cmds.circle(radius=size*1.2, normal=primary_axis, degree=1, sections=4,
-                             constructionHistory=False, name=base_name + "Local_IK_Control")[0]
+                             constructionHistory=False, name=base_name + "_Local_IK_Control")[0]
     cmds.setAttr(local_ctrl + '.rotate' + axis[-1], 45)
     local_off = limb_utils.align_lras(
         snap_align=True, sel=[local_ctrl, ik_joints[-1]])
@@ -190,7 +225,9 @@ def create_ik_controls_and_handle(base_name, ik_joints, pole_vector, axis='X', s
 
     control_dict = {'base_ctrl': base_ctrl,
                     'world_ctrl': world_ctrl,
-                    'local_ctrl': local_ctrl}
+                    'local_ctrl': local_ctrl,
+                    'pv_ctrl': pv_ctrl,
+                    'handle': ik_handle}
     return control_dict
 
 
