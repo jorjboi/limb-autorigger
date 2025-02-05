@@ -70,15 +70,14 @@ def create_limb(side='L', limb='arm',
     fk_ctrl_group = cmds.group(empty=True, name=base_name + '_FK_CTRL_GROUP')
     ik_ctrl_group = cmds.group(empty=True, name=base_name + '_IK_CTRL_GROUP')
     skeleton_ctrl_group = cmds.group(
-        empty=True, name=base_name + '_skeleton_CTRL_GROUP')
+        empty=True, name=base_name + '_skeleton_GROUP')
     no_xform_group = cmds.group(
-        empty=True, name=base_name + '_noXform_CTRL_GROUP')
+        empty=True, name=base_name + '_noXform_GROUP')
     limb_rig_group = cmds.group(empty=True, name=base_name + '_rig_GROUP')
     all_group = cmds.group(empty=True, name=base_name.upper())
 
     # Group ik and fk controls
-    cmds.parent(ik_world_ctrl, ik_local_ctrl,
-                ik_ctrl_group, ik_pv_ctrl, ik_ctrl_group)
+    cmds.parent(ik_world_ctrl, ik_pv_ctrl, ik_base_ctrl, ik_ctrl_group)
     cmds.parent(fk_ctrls[0], fk_ctrl_group)
 
     # Parent bind chain to skeleton group
@@ -95,6 +94,21 @@ def create_limb(side='L', limb='arm',
     limb_utils.transfer_pivots(
         sel=[bind_chain[0], skeleton_ctrl_group, limb_rig_group, fk_ctrl_group, ik_ctrl_group])
     cmds.hide(no_xform_group, fk_chain[0], ik_chain[0], bind_chain[0])
+
+    # Global scalling
+    cmds.addAttr(all_group, attributeType='double', min=0.001,
+                 defaultValue=1, keyable=True, longName='globalScale')
+    [cmds.connectAttr(all_group + '.globalScale', all_group +
+                      '.scale' + axis) for axis in 'XYZ']
+    if stretch:
+        gs_mdl = cmds.createNode(
+            'multDoubleLinear', name=base_name + "_globalScale_MDL")
+        cmds.setAttr(gs_mdl + '.input1', ik_stretch_ctrls['total_length'])
+        cmds.connectAttr(all_group + '.globalScale', gs_mdl + '.input2')
+        cmds.connectAttr(gs_mdl + '.output',
+                         ik_stretch_ctrls['mdn'] + '.input2X')
+        cmds.connectAttr(gs_mdl + '.output',
+                         ik_stretch_ctrls['cnd'] + '.secondTerm')
 
 # Returns a list of joints for an IK, FK, or bind chain
 
@@ -173,8 +187,8 @@ def create_fk_controls(fk_joints, axis='X', size=1):
         ctrl_offset = limb_utils.align_lras(
             snap_align=True, sel=[circle_ctrl, fk])
         cmds.pointConstraint(circle_ctrl, fk)
-        cmds.orientConstraint(circle_ctrl, fk)  # This line may need work?
-        # cmds.connectAttr(circle_ctrl + '.rotate', fk + '.rotate')
+        # cmds.orientConstraint(circle_ctrl, fk)  # This line may need work?
+        cmds.connectAttr(circle_ctrl + '.rotate', fk + '.rotate')
         fk_controls.append(circle_ctrl)
         idx += 1
     return fk_controls
